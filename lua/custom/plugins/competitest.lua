@@ -5,7 +5,7 @@ return {
     require('competitest').setup {
       -- 컴파일 명령어 (작성하셨던 C++23 기준 반영)
       compile_command = {
-        cpp = { exec = 'g++', args = { '-std=c++23', '-Wall', '-O2', '$(FNAME)', '-o', '$(FNOEXT)' } },
+        cpp = { exec = require('custom.cxx').compiler(), args = { '-std=c++23', '-Wall', '-O2', '$(FNAME)', '-o', '$(FNOEXT)' } },
         java = { exec = 'javac', args = { '$(FNAME)' } },
       },
       -- 실행 명령어

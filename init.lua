@@ -1022,7 +1022,8 @@ vim.keymap.set('n', '<F4>', function()
   local charset_flags = ''
   if enc == 'cp949' or enc == 'euc-kr' then charset_flags = '-finput-charset=CP949 -fexec-charset=UTF-8' end
 
-  local compile_cmd = string.format('g++ %s -std=c++23 -Wall -O2 %s -o %s', charset_flags, escaped_file, escaped_output)
+  local cxx = require('custom.cxx').compiler()
+  local compile_cmd = string.format('%s %s -std=c++23 -Wall -O2 %s -o %s', cxx, charset_flags, escaped_file, escaped_output)
   local command = compile_cmd .. ' && exec ' .. escaped_output
 
   vim.cmd 'vnew'
