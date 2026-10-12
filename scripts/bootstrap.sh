@@ -152,7 +152,8 @@ install_java() {
   source "$HOME/.sdkman/bin/sdkman-init.sh"
 
   local java_id
-  java_id="$(sdk list java | grep -oE "${JAVA_MAJOR}[0-9.]*(\+[0-9.]+)?-tem" | sort -V | tail -1)"
+  # (macOS 기본 sort에는 -V가 없을 수 있어서 숫자 필드로 정렬)
+  java_id="$(sdk list java | grep -oE "${JAVA_MAJOR}[0-9.]*(\+[0-9.]+)?-tem" | sort -t. -k1,1n -k2,2n -k3,3n | tail -1)"
   [ -n "$java_id" ] || die "SDKMAN에서 Java $JAVA_MAJOR (Temurin)을 찾지 못했습니다."
   if [ -d "$HOME/.sdkman/candidates/java/$java_id" ]; then
     skip "Java $java_id"
@@ -249,7 +250,10 @@ sync_nvim() {
   # dap.lua(mason-nvim-dap)가 시작할 때 codelldb 설치를 시작하는데, 앞 단계에서 nvim이 바로 종료되며
   # 중단된 설치가 깨진 링크를 남길 수 있다 → 깨진 링크 정리 후, 진행 중인 설치가 끝나길 기다렸다가 나머지 설치
   local mason_bin="${XDG_DATA_HOME:-$HOME/.local/share}/nvim/mason/bin"
-  [ -d "$mason_bin" ] && find "$mason_bin" -xtype l -delete
+  # (macOS의 find에는 -xtype이 없어서 직접 검사)
+  for link in "$mason_bin"/*; do
+    if [ -L "$link" ] && [ ! -e "$link" ]; then rm -f "$link"; fi
+  done
   nvim --headless -c "lua
     local registry = require 'mason-registry'
     registry.refresh()
