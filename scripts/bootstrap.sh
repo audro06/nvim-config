@@ -217,6 +217,17 @@ ensure_path() {
       printf '\n%s\n' "$line" >>"$rc"
     fi
   done
+
+  # macOS: /etc/paths.d가 /opt/homebrew/bin을 PATH 맨 뒤에 붙여서 python3 등이 시스템 것(/usr/bin)으로 잡힘
+  #  → 로그인 셸(~/.zprofile)에서 brew shellenv로 앞에 추가 (~/.zshrc가 나중에 읽혀서 ~/.local/bin이 여전히 맨 앞)
+  if [ "$PLATFORM" = macos ] && command -v brew >/dev/null; then
+    local zprofile="$HOME/.zprofile"
+    touch "$zprofile"
+    if grep -q 'brew shellenv' "$zprofile"; then skip "Homebrew PATH 설정 ($zprofile)" "이미 있음"; else
+      info "Homebrew PATH 설정 추가: $zprofile"
+      printf '\neval "$(%s shellenv)" # nvim-config\n' "$(brew --prefix)/bin/brew" >>"$zprofile"
+    fi
+  fi
 }
 
 # ---------------------------------------------------------------- 설정 저장소
