@@ -258,6 +258,17 @@ require('lazy').setup({
   -- NOTE: Plugins can be added via a link or github org/name. To run setup automatically, use `opts = {}`
   { 'NMAC427/guess-indent.nvim', opts = {} },
 
+  {
+    'windwp/nvim-autopairs',
+    event = 'InsertEnter',
+    config = true,
+    opts = {},
+  },
+  -- 'lazy.nvim' 플러그인 목록 안에 추가
+  {
+    'github/copilot.vim',
+  },
+
   -- Alternatively, use `config = function() ... end` for full control over the configuration.
   -- If you prefer to call `setup` explicitly, use:
   --    {
@@ -600,7 +611,7 @@ require('lazy').setup({
       --  See `:help lsp-config` for information about keys and how to configure
       ---@type table<string, vim.lsp.Config>
       local servers = {
-        -- clangd = {},
+        clangd = {},
         -- gopls = {},
         -- pyright = {},
         -- rust_analyzer = {},
@@ -760,7 +771,7 @@ require('lazy').setup({
         -- <c-k>: Toggle signature help
         --
         -- See :h blink-cmp-config-keymap for defining your own keymap
-        preset = 'default',
+        preset = 'super-tab',
 
         -- For more advanced Luasnip keymaps (e.g. selecting choice nodes, expansion) see:
         --    https://github.com/L3MON4D3/LuaSnip?tab=readme-ov-file#keymaps
@@ -920,7 +931,7 @@ require('lazy').setup({
   --    This is the easiest way to modularize your config.
   --
   --  Uncomment the following line and add your plugins to `lua/custom/plugins/*.lua` to get going.
-  -- { import = 'custom.plugins' },
+  { import = 'custom.plugins' },
   --
   -- For additional information with loading, sourcing and examples see `:help lazy.nvim-🔌-plugin-spec`
   -- Or use telescope!
@@ -950,3 +961,134 @@ require('lazy').setup({
 
 -- The line beneath this is called `modeline`. See `:help modeline`
 -- vim: ts=2 sts=2 sw=2 et
+vim.opt.tabstop = 4
+vim.opt.softtabstop = 4
+vim.opt.shiftwidth = 4
+vim.opt.expandtab = true
+
+-- Copilot 설정: Tab 대신 Ctrl+J로 수락하기
+vim.g.copilot_no_tab_map = true
+vim.keymap.set('i', '<C-J>', 'copilot#Accept("\\<CR>")', {
+  expr = true,
+  replace_keycodes = false,
+})
+local disabled_roots = {
+  vim.fn.expand '~/boj',
+}
+
+local function copilot_should_be_disabled()
+  local cwd = vim.fn.getcwd()
+  for _, root in ipairs(disabled_roots) do
+    -- 현재 작업 디렉터리가 root 하위이면 비활성화
+    if cwd:sub(1, #root) == root then return true end
+  end
+  return false
+end
+
+-- Neovim이 시작될 때, 그리고 버퍼를 열 때마다 Copilot on/off 조정
+vim.api.nvim_create_autocmd({ 'VimEnter', 'BufRead', 'BufNewFile' }, {
+  callback = function()
+    if vim.fn.exists ':Copilot' ~= 2 then return end
+
+    if copilot_should_be_disabled() then
+      vim.cmd 'Copilot disable'
+    else
+      vim.cmd 'Copilot enable'
+    end
+  end,
+})
+vim.o.number = true -- 현재 줄 번호
+vim.o.relativenumber = true
+-- F5를 누르면 저장 -> 컴파일 -> 새 터미널에서 실행
+vim.keymap.set('n', '<F4>', function()
+  vim.cmd 'write' -- 현재 파일 저장
+
+  -- 저장되지 않은 버퍼라면 중단
+  local file_path = vim.fn.expand '%:p'
+  if file_path == '' then
+    vim.notify('먼저 파일을 저장해주세요.', vim.log.levels.WARN)
+    return
+  end
+
+  -- 확장자를 제거한 절대 출력 경로
+  local output_path = vim.fn.expand '%:p:r'
+
+  -- shellescape: 한글, 공백, 괄호, 특수문자 등이 포함된 경로 보호
+  local escaped_file = vim.fn.shellescape(file_path)
+  local escaped_output = vim.fn.shellescape(output_path)
+
+  -- 파일 인코딩 자동 감지 후 컴파일 옵션 동적 추가
+  local enc = vim.bo.fileencoding:lower()
+  local charset_flags = ''
+  if enc == 'cp949' or enc == 'euc-kr' then charset_flags = '-finput-charset=CP949 -fexec-charset=UTF-8' end
+
+  local compile_cmd = string.format('g++ %s -std=c++23 -Wall -O2 %s -o %s', charset_flags, escaped_file, escaped_output)
+  local command = compile_cmd .. ' && exec ' .. escaped_output
+
+  vim.cmd 'vnew'
+  vim.fn.termopen { 'sh', '-c', command }
+
+  vim.cmd 'startinsert'
+end, { desc = 'C++ Compile and Run' })
+vim.keymap.set('n', 'gl', vim.diagnostic.open_float)
+
+vim.diagnostic.config { virtual_text = false }
+-- LuaSnip을 불러옵니다.
+local ls = require 'luasnip'
+local s = ls.snippet
+local t = ls.text_node
+local i = ls.insert_node
+local rep = require('luasnip.extras').rep
+-- C++ 전용 스니펫을 추가합니다.
+ls.add_snippets('cpp', {
+  -- 'cp'라고 입력하고 자동완성하면 아래 코드가 전개됩니다.
+  s('cp', {
+    t {
+      '#include <bits/stdc++.h>',
+      '',
+      'using namespace std;',
+      '',
+      'int main() {',
+      '    ios_base::sync_with_stdio(false);',
+      '    cin.tie(NULL);',
+      '',
+      '    ',
+    },
+    -- i(1)은 코드가 전개된 후 커서가 처음 위치할 곳입니다.
+    i(1),
+    t {
+      '',
+      '    return 0;',
+      '}',
+    },
+  }),
+  s('hw', {
+    t {
+      '#include <iostream>',
+      '',
+      'using std::cin;',
+      'using std::cout;',
+      '',
+      'int main() {',
+      '    cin.tie(nullptr)->sync_with_stdio(false);',
+      '    ',
+    },
+    i(1),
+    t { '', '    return 0;', '}' },
+  }),
+  s('fori', {
+    t 'for (int ',
+    i(1, 'i'),
+    t ' = 0; ',
+    rep(1),
+    t ' < ',
+    i(2, 'n'),
+    t '; ++',
+    rep(1),
+    t ') {',
+    t { '', '    ' },
+    i(0),
+    t { '', '}' },
+  }),
+})
+vim.opt.fileencodings = { 'utf-8', 'cp949', 'euc-kr', 'latin1' }
