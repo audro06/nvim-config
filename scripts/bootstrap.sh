@@ -91,7 +91,8 @@ install_system_packages() {
     command -v brew >/dev/null || die "Homebrew가 필요합니다: https://brew.sh 설치 후 다시 실행하세요."
     xcode-select -p >/dev/null 2>&1 || die "Xcode Command Line Tools가 필요합니다: xcode-select --install 실행 후 다시 실행하세요."
     # gcc: bits/stdc++.h를 쓰는 C++ 코테 코드용 (macOS 기본 g++는 clang이라 지원 안 함)
-    local pkgs=(git curl ripgrep node python gcc unzip zip)
+    # bash: SDKMAN은 Bash 4 이상이 필요 (macOS 기본 bash는 3.2)
+    local pkgs=(git curl ripgrep node python gcc unzip zip bash)
     local missing=()
     for p in "${pkgs[@]}"; do brew list --formula "$p" >/dev/null 2>&1 || missing+=("$p"); done
     if [ ${#missing[@]} -eq 0 ]; then
@@ -101,6 +102,18 @@ install_system_packages() {
       brew install "${missing[@]}"
     fi
   fi
+}
+
+# ---------------------------------------------------------------- Bash 4+ (SDKMAN용)
+# macOS 기본 bash(3.2)로 실행됐으면 brew bash로 스크립트를 처음부터 다시 실행 (이미 끝난 단계는 건너뜀)
+reexec_with_modern_bash() {
+  [ "${BASH_VERSINFO[0]}" -ge 4 ] && return
+  local brew_bash
+  brew_bash="$(brew --prefix 2>/dev/null)/bin/bash"
+  [ -x "$brew_bash" ] || die "Bash 4 이상이 필요합니다 (현재 $BASH_VERSION). brew install bash 후 다시 실행하세요."
+  info "Bash $BASH_VERSION → $brew_bash 로 다시 실행"
+  rm -rf "$TMP_DIR"
+  exec "$brew_bash" "$0" "$@"
 }
 
 # ---------------------------------------------------------------- Neovim
@@ -140,7 +153,7 @@ install_java() {
   if [ ! -d "$HOME/.sdkman" ]; then
     info "SDKMAN 설치"
     download "https://get.sdkman.io" "$TMP_DIR/sdkman.sh"
-    bash "$TMP_DIR/sdkman.sh"
+    "$BASH" "$TMP_DIR/sdkman.sh"
   else
     skip "SDKMAN"
   fi
@@ -256,21 +269,34 @@ sync_nvim() {
   done
   nvim --headless -c "lua
     local registry = require 'mason-registry'
-    registry.refresh()
     local names = vim.split('$MASON_PACKAGES', ' ', { trimempty = true })
-    vim.wait(600000, function()
+    -- (headless :MasonInstall은 설치 프로그램의 stderr를 오류로 바꿔서 macOS tar -v 출력에 중단됨 → API로 직접 설치)
+    -- mason-nvim-dap의 시작 시 설치(schedule) 뒤에 실행되도록 예약하고, 이미 설치 중인 패키지는 건너뜀
+    local started = false
+    registry.refresh(vim.schedule_wrap(function()
       for _, name in ipairs(names) do
-        local ok, pkg = pcall(registry.get_package, name)
-        if ok and pkg:is_installing() then return false end
+        local pkg = registry.get_package(name)
+        if not pkg:is_installed() and not pkg:is_installing() then pkg:install() end
+      end
+      started = true
+    end))
+    vim.wait(1200000, function()
+      if not started then return false end
+      for _, name in ipairs(names) do
+        if registry.get_package(name):is_installing() then return false end
       end
       return true
     end, 1000)
     local missing = vim.tbl_filter(function(name) return not registry.is_installed(name) end, names)
-    if #missing > 0 then vim.cmd('MasonInstall ' .. table.concat(missing, ' ')) end
-  " +qa
+    if #missing > 0 then
+      io.stderr:write('Mason 설치 실패: ' .. table.concat(missing, ' ') .. '\\n')
+      vim.cmd 'cquit 1'
+    end
+  " +qa || die "Mason 도구 설치에 실패했습니다. nvim에서 :Mason 으로 확인하세요."
 }
 
 install_system_packages
+reexec_with_modern_bash "$@"
 install_neovim
 install_tree_sitter
 install_java
