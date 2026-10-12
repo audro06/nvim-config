@@ -41,7 +41,7 @@ for arg in "$@"; do
 done
 
 info() { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
-skip() { printf '\033[2m  - %s (이미 설치됨)\033[0m\n' "$*"; }
+skip() { printf '\033[2m  - %s (%s)\033[0m\n' "$1" "${2:-이미 설치됨}"; }
 die() {
   printf '\033[1;31m오류:\033[0m %s\n' "$*" >&2
   exit 1
@@ -198,7 +198,7 @@ ensure_path() {
   [ "$PLATFORM" = macos ] && rcs+=("$HOME/.zshrc")
   for rc in "${rcs[@]}"; do
     touch "$rc"
-    if grep -q '# nvim-config' "$rc"; then skip "PATH 설정 ($rc)"; else
+    if grep -q '# nvim-config' "$rc"; then skip "PATH 설정 ($rc)" "이미 있음"; else
       info "PATH 설정 추가: $rc"
       printf '\n%s\n' "$line" >>"$rc"
     fi
@@ -212,7 +212,7 @@ setup_config() {
       info "설정 저장소 업데이트 (git pull)"
       git -C "$CONFIG_DIR" pull --ff-only
     else
-      skip "설정 저장소 (수정 중인 파일이 있어 pull 생략)"
+      skip "설정 저장소 업데이트" "수정 중인 파일이 있어 git pull 생략"
     fi
     return
   fi
@@ -229,6 +229,16 @@ setup_config() {
 
 # ---------------------------------------------------------------- 플러그인 / 파서 / Mason 도구
 sync_nvim() {
+  # kickstart는 처음 실행할 때 lazy.nvim 최신판을 clone하므로, lock에 적힌 버전으로 미리 받아 둔다
+  local lazy_dir="${XDG_DATA_HOME:-$HOME/.local/share}/nvim/lazy/lazy.nvim"
+  local lazy_commit
+  lazy_commit="$(grep -oE '"lazy.nvim": \{[^}]*"commit": "[0-9a-f]+"' "$CONFIG_DIR/lazy-lock.json" | grep -oE '[0-9a-f]{40}')"
+  if [ ! -d "$lazy_dir" ] && [ -n "$lazy_commit" ]; then
+    info "lazy.nvim 설치 (${lazy_commit:0:7})"
+    git clone --filter=blob:none https://github.com/folke/lazy.nvim.git "$lazy_dir"
+    git -C "$lazy_dir" checkout -q "$lazy_commit"
+  fi
+
   info "플러그인 설치 (lazy-lock.json 버전 기준)"
   nvim --headless "+Lazy! restore" +qa
 
@@ -236,14 +246,22 @@ sync_nvim() {
   nvim --headless -c "lua require('nvim-treesitter').install({ $TS_PARSERS }):wait(600000)" +qa
 
   info "Mason 도구 설치: $MASON_PACKAGES"
-  # 설치 안 된 것만 골라서 MasonInstall (headless에서는 설치가 끝날 때까지 기다림)
+  # dap.lua(mason-nvim-dap)가 시작할 때 codelldb 설치를 시작하는데, 앞 단계에서 nvim이 바로 종료되며
+  # 중단된 설치가 깨진 링크를 남길 수 있다 → 깨진 링크 정리 후, 진행 중인 설치가 끝나길 기다렸다가 나머지 설치
+  local mason_bin="${XDG_DATA_HOME:-$HOME/.local/share}/nvim/mason/bin"
+  [ -d "$mason_bin" ] && find "$mason_bin" -xtype l -delete
   nvim --headless -c "lua
     local registry = require 'mason-registry'
     registry.refresh()
-    local missing = {}
-    for name in ('$MASON_PACKAGES'):gmatch '%S+' do
-      if not registry.is_installed(name) then table.insert(missing, name) end
-    end
+    local names = vim.split('$MASON_PACKAGES', ' ', { trimempty = true })
+    vim.wait(600000, function()
+      for _, name in ipairs(names) do
+        local ok, pkg = pcall(registry.get_package, name)
+        if ok and pkg:is_installing() then return false end
+      end
+      return true
+    end, 1000)
+    local missing = vim.tbl_filter(function(name) return not registry.is_installed(name) end, names)
     if #missing > 0 then vim.cmd('MasonInstall ' .. table.concat(missing, ' ')) end
   " +qa
 }
