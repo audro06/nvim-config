@@ -24,4 +24,33 @@ function M.compiler()
   return compiler
 end
 
+-- clangd 설정 (macOS만): F4와 같은 brew gcc의 libstdc++ 헤더를 보게 함
+--   기본 clangd는 Apple libc++ 헤더를 써서 bits/stdc++.h를 못 찾음
+--   - compile_commands.json이 g++-NN을 쓰는 프로젝트: --query-driver로 gcc에 헤더 경로를 물어봄
+--   - 단일 파일(코테): fallbackFlags에 gcc의 C++ 헤더 경로를 넣음 (F4와 같은 -std=c++23)
+---@return vim.lsp.Config
+function M.clangd_config()
+  if vim.fn.has 'mac' == 0 then return {} end
+  return {
+    cmd = { 'clangd', '--query-driver=/opt/homebrew/bin/g++-*,/usr/local/bin/g++-*' },
+    before_init = function(params)
+      local cxx = M.compiler()
+      if cxx == 'g++' then return end
+      local result = vim.system({ cxx, '-xc++', '-E', '-v', '-' }, { stdin = '' }):wait()
+      local flags = { '-std=c++23', '-nostdinc++' }
+      local in_list = false
+      for line in (result.stderr or ''):gmatch '[^\n]+' do
+        if line:find('search starts here', 1, true) then
+          in_list = true
+        elseif line:find('End of search list', 1, true) then
+          break
+        elseif in_list and line:find('/include/c++/', 1, true) then
+          vim.list_extend(flags, { '-isystem', vim.trim(line) })
+        end
+      end
+      params.initializationOptions = vim.tbl_extend('force', params.initializationOptions or {}, { fallbackFlags = flags })
+    end,
+  }
+end
+
 return M

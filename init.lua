@@ -611,7 +611,7 @@ require('lazy').setup({
       --  See `:help lsp-config` for information about keys and how to configure
       ---@type table<string, vim.lsp.Config>
       local servers = {
-        clangd = {},
+        clangd = require('custom.cxx').clangd_config(), -- macOS: brew gcc 헤더 사용 (Linux는 기본값)
         -- gopls = {},
         -- pyright = {},
         -- rust_analyzer = {},
