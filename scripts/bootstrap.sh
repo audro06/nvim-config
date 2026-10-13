@@ -267,6 +267,16 @@ sync_nvim() {
   info "플러그인 설치 (lazy-lock.json 버전 기준)"
   nvim --headless "+Lazy! restore" +qa
 
+  # Jupyter 노트북: molten용 Python venv + jupytext CLI (lua/custom/plugins/jupyter.lua의 build 단계)
+  local jupyter_venv="${XDG_DATA_HOME:-$HOME/.local/share}/nvim/jupyter-venv"
+  if [ -x "$jupyter_venv/bin/python" ] && command -v jupytext >/dev/null; then
+    skip "Jupyter 노트북 환경"
+  else
+    info "Jupyter 노트북 환경 (molten venv, jupytext)"
+    nvim --headless "+Lazy! build molten-nvim" +qa
+    [ -x "$jupyter_venv/bin/python" ] || die "molten용 Python venv 생성 실패"
+  fi
+
   info "treesitter 파서 설치"
   nvim --headless -c "lua require('nvim-treesitter').install({ $TS_PARSERS }):wait(600000)" +qa
 
