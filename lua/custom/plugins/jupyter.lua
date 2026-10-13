@@ -60,14 +60,21 @@ local function goto_next_cell()
 end
 
 local function run_all_cells()
+  local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+  local is_header = function(lnum) return lines[lnum] ~= nil and lines[lnum]:match '^# %%' ~= nil end
   local view = vim.fn.winsaveview()
-  vim.cmd 'normal! gg'
-  if not vim.fn.getline(1):match '^# %%' then
-    run_cell() -- 첫 `# %%` 이전 코드
-  end
-  while vim.fn.search('^# %%', 'W') > 0 do
-    vim.cmd 'normal! j'
+
+  -- 각 셀의 첫 줄에 커서를 두고 run_cell (첫 `# %%` 이전 코드도 하나의 셀로 취급)
+  if not is_header(1) then
+    vim.fn.cursor(1, 1)
     run_cell()
+  end
+  for lnum = 1, #lines do
+    -- 내용이 없는 셀(헤더 바로 다음이 헤더)은 건너뜀
+    if is_header(lnum) and lnum < #lines and not is_header(lnum + 1) then
+      vim.fn.cursor(lnum + 1, 1)
+      run_cell()
+    end
   end
   vim.fn.winrestview(view)
 end
