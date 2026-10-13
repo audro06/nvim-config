@@ -10,7 +10,8 @@ local venv = vim.fn.stdpath 'data' .. '/jupyter-venv'
 local venv_python = venv .. '/bin/python'
 
 -- molten 실행용 venv 생성 + jupytext CLI 설치 (Lazy 설치/업데이트 시 실행)
-local function build()
+---@param plugin LazyPlugin
+local function build(plugin)
   local function run(cmd)
     local r = vim.system(cmd, { text = true }):wait()
     if r.code ~= 0 then error(table.concat(cmd, ' ') .. '\n' .. (r.stderr or '')) end
@@ -28,6 +29,9 @@ local function build()
   if vim.fn.executable 'jupytext' == 0 then run { 'uv', 'tool', 'install', '-q', 'jupytext' } end
 
   vim.g.python3_host_prog = venv_python
+  -- 처음 설치할 때는 build가 플러그인 로드 전에 실행되어 molten이 runtimepath에 없음
+  --  → 그대로 UpdateRemotePlugins 하면 molten이 등록되지 않으므로 먼저 추가
+  if not vim.tbl_contains(vim.opt.rtp:get(), plugin.dir) then vim.opt.rtp:prepend(plugin.dir) end
   vim.cmd 'UpdateRemotePlugins'
 end
 

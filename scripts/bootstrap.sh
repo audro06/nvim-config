@@ -269,12 +269,14 @@ sync_nvim() {
 
   # Jupyter 노트북: molten용 Python venv + jupytext CLI (lua/custom/plugins/jupyter.lua의 build 단계)
   local jupyter_venv="${XDG_DATA_HOME:-$HOME/.local/share}/nvim/jupyter-venv"
-  if [ -x "$jupyter_venv/bin/python" ] && command -v jupytext >/dev/null; then
+  local rplugin_manifest="${XDG_DATA_HOME:-$HOME/.local/share}/nvim/rplugin.vim"
+  if [ -x "$jupyter_venv/bin/python" ] && command -v jupytext >/dev/null && grep -q molten "$rplugin_manifest" 2>/dev/null; then
     skip "Jupyter 노트북 환경"
   else
     info "Jupyter 노트북 환경 (molten venv, jupytext)"
     nvim --headless "+Lazy! build molten-nvim" +qa
     [ -x "$jupyter_venv/bin/python" ] || die "molten용 Python venv 생성 실패"
+    grep -q molten "$rplugin_manifest" || die "molten 등록(UpdateRemotePlugins) 실패"
   fi
 
   info "treesitter 파서 설치"
