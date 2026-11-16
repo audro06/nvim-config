@@ -99,7 +99,8 @@ do
   vim.g.maplocalleader = ' '
 
   -- Set to true if you have a Nerd Font installed and selected in the terminal
-  vim.g.have_nerd_font = false
+  --  (이 저장소: D2CodingLigature Nerd Font Mono를 쓴다. 글꼴이 없는 터미널에서는 false로)
+  vim.g.have_nerd_font = true
 
   -- [[ Setting options ]]
   --  See `:help vim.o`

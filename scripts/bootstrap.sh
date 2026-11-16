@@ -16,6 +16,8 @@ REPO_URL="${NVIM_CONFIG_REPO:-https://github.com/audro06/nvim-config.git}"
 NVIM_VERSION="v0.12.6"
 TREE_SITTER_VERSION="v0.26.7"
 JAVA_MAJOR="26"
+# 아이콘용 글꼴 (macOS는 brew로 설치. WSL은 Windows 쪽에 직접 설치해야 한다 → 맨 끝 안내 참고)
+NERD_FONT_CASK="font-d2coding-nerd-font"
 CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/nvim"
 LOCAL_BIN="$HOME/.local/bin"
 LOCAL_OPT="$HOME/.local/opt"
@@ -100,6 +102,13 @@ install_system_packages() {
     else
       info "brew 패키지 설치: ${missing[*]}"
       brew install "${missing[@]}"
+    fi
+    # Nerd Font (init.lua의 have_nerd_font = true): 설치 후 터미널 글꼴로 직접 선택해야 한다
+    if brew list --cask "$NERD_FONT_CASK" >/dev/null 2>&1; then
+      skip "Nerd Font ($NERD_FONT_CASK)"
+    else
+      info "Nerd Font 설치: $NERD_FONT_CASK"
+      brew install --cask "$NERD_FONT_CASK"
     fi
   fi
 }
@@ -351,4 +360,10 @@ $(printf '\033[1;32m설치 완료!\033[0m')
   1. 새 터미널을 열거나:  source ~/.bashrc$([ "$PLATFORM" = macos ] && echo "  (zsh: source ~/.zshrc)")
   2. Claude Code 로그인:  claude
   3. (Copilot 사용 시) nvim에서  :Copilot setup
+  4. 터미널 글꼴을 Nerd Font로 설정 (아이콘 표시용. 예: D2CodingLigature Nerd Font Mono)
+$(if [ "$PLATFORM" = macos ]; then
+  echo "     글꼴은 방금 설치됨 ($NERD_FONT_CASK) → 터미널 설정에서 선택"
+else
+  echo "     WSL은 Windows에 글꼴을 설치하고 Windows Terminal 설정에서 선택: https://www.nerdfonts.com/font-downloads"
+fi)
 EOF
