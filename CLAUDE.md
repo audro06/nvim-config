@@ -88,7 +88,8 @@ bash scripts/check.sh
 10. **macOS**: 기본 bash는 3.2(SDKMAN은 4 이상 필요), `find -xtype`·`sort -V` 없음, `g++`는 clang(`bits/stdc++.h` 없음), Homebrew가 PATH 뒤쪽에 붙음. `bootstrap.sh`와 `cxx.lua`가 처리하고 있으니 셸 스크립트를 고칠 때 GNU 전용 옵션을 쓰지 않는다.
 11. **clangd는 일반 로그도 stderr로 내보낸다.** `--log=error`가 없으면 `~/.local/state/nvim/lsp.log`가 수백 MB로 커진다 (`cxx.lua`).
 12. **Windows에서 WSL 명령을 실행할 때** (`wsl -d Ubuntu-24.04 -- bash -c '...'`) 따옴표와 `$`가 PowerShell에서 깨진다. 스크립트 파일로 저장해서 `bash 파일경로`로 실행한다. WSL의 비대화형 셸은 `~/.bashrc`를 읽지 않으므로 PATH(`~/.local/bin`, SDKMAN, `~/.cargo/bin`)를 직접 잡아야 한다.
-13. sudo는 비밀번호가 필요하다. `bootstrap.sh`의 apt 단계만 sudo를 쓰고, 나머지는 모두 홈 폴더에 설치한다.
+13. **`gh` 명령은 `-R audro06/nvim-config`를 붙인다.** `upstream` 원격이 있어서 `gh`가 kickstart 원본 저장소를 기본으로 잡을 수 있다. PR이나 이슈가 kickstart 쪽에 만들어지지 않게 주의한다.
+14. sudo는 비밀번호가 필요하다. `bootstrap.sh`의 apt 단계만 sudo를 쓰고, 나머지는 모두 홈 폴더에 설치한다.
 
 ## 알려진 한계
 
