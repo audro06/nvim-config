@@ -2,7 +2,8 @@
 --  - 편집: jupytext.nvim이 .ipynb를 `# %%` 셀 구분 Python으로 열고, 저장하면 .ipynb로 되돌림
 --          (filetype이 python이라 pyright/ruff/자동완성이 그대로 동작)
 --  - 실행: molten.nvim이 Jupyter 커널에서 셀 실행, 출력은 셀 아래 표시
---  - 그래프: 별도 창(기본 이미지 뷰어)으로 자동 표시. WSL은 Windows 뷰어 사용
+--  - 그래프: 터미널이 지원하면 셀 아래에 바로 표시 (image.nvim. Windows Terminal/WezTerm은 Sixel, Kitty/Ghostty는 Kitty 방식)
+--            아니면 별도 창(기본 이미지 뷰어)으로 자동 표시. WSL은 Windows 뷰어 사용
 --  - 커널: 프로젝트에 .venv가 있으면 그 Python, 없으면 기본 python3 커널
 --
 --  molten은 nvim 전용 Python venv(pynvim, jupyter_client 등)에서 돌아감 → build 단계에서 uv로 생성
@@ -33,6 +34,68 @@ local function build(plugin)
   --  → 그대로 UpdateRemotePlugins 하면 molten이 등록되지 않으므로 먼저 추가
   if not vim.tbl_contains(vim.opt.rtp:get(), plugin.dir) then vim.opt.rtp:prepend(plugin.dir) end
   vim.cmd 'UpdateRemotePlugins'
+end
+
+-- 그래프를 nvim 안에 그릴 방법 (image.nvim backend). 지원하지 않는 환경이면 nil → 별도 창으로 표시
+--  - Windows Terminal(1.22 이상), WezTerm: Sixel / Kitty, Ghostty: Kitty 그래픽 프로토콜
+--  - 환경 변수 NVIM_IMAGE_BACKEND=kitty|sixel|none 으로 직접 지정 가능 (tmux 안에서는 직접 지정해야 함)
+--  - ImageMagick(magick 또는 convert)이 없으면 쓰지 않음
+local function image_backend()
+  if vim.fn.executable 'magick' == 0 and vim.fn.executable 'convert' == 0 then return nil end
+
+  local env = vim.env
+  local forced = env.NVIM_IMAGE_BACKEND
+  if forced == 'kitty' or forced == 'sixel' then return forced end
+  if forced == 'none' or env.TMUX then return nil end
+
+  if env.KITTY_WINDOW_ID or env.TERM == 'xterm-kitty' or env.TERM == 'xterm-ghostty' or env.TERM_PROGRAM == 'ghostty' then return 'kitty' end
+  if env.WT_SESSION or env.TERM_PROGRAM == 'WezTerm' then return 'sixel' end
+  return nil
+end
+
+-- Windows Terminal에서 글자 한 칸의 픽셀 크기 보정
+--  WSL에서는 터미널의 픽셀 크기를 알 수 없어서(ioctl이 0을 돌려줌) image.nvim이 한 칸을 8x16으로 가정하는데,
+--  Windows Terminal의 Sixel은 글꼴 크기와 상관없이 한 칸을 10x20 픽셀로 취급한다 → 그대로 두면 그래프가 작게 그려짐
+--  (molten은 'image.utils.term', image.nvim은 'image/utils/term'으로 같은 파일을 따로 불러서 둘 다 고친다)
+local function use_windows_terminal_cell_size()
+  for _, name in ipairs { 'image/utils/term', 'image.utils.term' } do
+    local term = require(name)
+    local get_size = term.get_size
+    term.get_size = function()
+      local size = get_size()
+      if not size then return size end
+      return vim.tbl_extend('force', size, {
+        cell_width = 10,
+        cell_height = 20,
+        screen_x = size.screen_cols * 10,
+        screen_y = size.screen_rows * 20,
+      })
+    end
+  end
+end
+
+---@param backend 'kitty'|'sixel'
+local function setup_image(backend)
+  require('image').setup {
+    backend = backend,
+    processor = 'magick_cli',
+    -- Markdown 등 다른 문서의 이미지는 건드리지 않음 (노트북 출력과 이미지 파일 열기만)
+    integrations = {
+      markdown = { enabled = false },
+      asciidoc = { enabled = false },
+      typst = { enabled = false },
+      neorg = { enabled = false },
+      syslang = { enabled = false },
+    },
+    -- 아래 값은 molten README의 image.nvim 권장 설정
+    max_width = 100,
+    max_height = 12,
+    max_height_window_percentage = math.huge,
+    max_width_window_percentage = math.huge,
+    window_overlap_clear_enabled = true, -- 창이 겹치면(자동완성, 출력 창 등) 그림을 잠시 지움
+    window_overlap_clear_ft_ignore = { 'cmp_menu', 'cmp_docs', '' },
+  }
+  if vim.env.WT_SESSION then use_windows_terminal_cell_size() end
 end
 
 -- 현재 셀(`# %%` ~ 다음 `# %%` 직전)의 줄 범위. 마크다운 셀이면 nil
@@ -109,6 +172,12 @@ local function init_kernel()
 end
 
 return {
+  { -- 그래프를 nvim 안에 표시 (지원하는 터미널에서만 molten의 init이 불러서 씀)
+    '3rd/image.nvim',
+    lazy = true,
+    build = false, -- magick Lua rock을 빌드하지 않음 (ImageMagick CLI 사용)
+  },
+
   {
     'GCBallesteros/jupytext.nvim',
     lazy = false, -- .ipynb를 열기 전에 로드되어 있어야 변환됨
@@ -136,8 +205,11 @@ return {
     build = build,
     init = function()
       vim.g.python3_host_prog = venv_python
-      vim.g.molten_image_provider = 'none'
-      vim.g.molten_auto_image_popup = true -- 그래프는 별도 창으로
+      -- 그래프: 터미널이 지원하면 셀 아래에 바로 표시, 아니면 별도 창으로 (<leader>np는 어느 쪽이든 별도 창)
+      local backend = image_backend()
+      if backend then setup_image(backend) end
+      vim.g.molten_image_provider = backend and 'image.nvim' or 'none'
+      vim.g.molten_auto_image_popup = backend == nil
       vim.g.molten_auto_open_output = false -- 커서를 올릴 때마다 출력 창 띄우지 않기
       vim.g.molten_virt_text_output = true -- 출력을 셀 아래에 표시
       vim.g.molten_virt_lines_off_by_1 = true -- `# %%` 형식에서 출력이 다음 셀 표시줄 위에 오도록

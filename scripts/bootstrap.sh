@@ -79,7 +79,8 @@ install_system_packages() {
     command -v apt-get >/dev/null || die "apt-get이 없습니다. Ubuntu/Debian 계열만 지원합니다. (--skip-system으로 건너뛸 수 있음)"
     # build-essential: C/C++ 컴파일러 (treesitter 파서 빌드, C++ 코테)
     # nodejs/npm: pyright 언어 서버 / python3-venv: Mason의 debugpy
-    local pkgs=(git curl unzip zip build-essential ripgrep python3-venv nodejs npm)
+    # imagemagick: 노트북 그래프를 nvim 안에 표시 (image.nvim)
+    local pkgs=(git curl unzip zip build-essential ripgrep python3-venv nodejs npm imagemagick)
     local missing=()
     for p in "${pkgs[@]}"; do dpkg -s "$p" >/dev/null 2>&1 || missing+=("$p"); done
     if [ ${#missing[@]} -eq 0 ]; then
@@ -94,7 +95,8 @@ install_system_packages() {
     xcode-select -p >/dev/null 2>&1 || die "Xcode Command Line Tools가 필요합니다: xcode-select --install 실행 후 다시 실행하세요."
     # gcc: bits/stdc++.h를 쓰는 C++ 코테 코드용 (macOS 기본 g++는 clang이라 지원 안 함)
     # bash: SDKMAN은 Bash 4 이상이 필요 (macOS 기본 bash는 3.2)
-    local pkgs=(git curl ripgrep node python gcc unzip zip bash)
+    # imagemagick: 노트북 그래프를 nvim 안에 표시 (image.nvim)
+    local pkgs=(git curl ripgrep node python gcc unzip zip bash imagemagick)
     local missing=()
     for p in "${pkgs[@]}"; do brew list --formula "$p" >/dev/null 2>&1 || missing+=("$p"); done
     if [ ${#missing[@]} -eq 0 ]; then

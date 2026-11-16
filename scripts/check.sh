@@ -111,6 +111,7 @@ end
 report(vim.fn.exists ':MoltenInit' == 2, ':MoltenInit (안 되면 :Lazy build molten-nvim)')
 report(vim.fn.exists ':ClaudeCode' == 2 or pcall(vim.cmd, 'Lazy load claudecode.nvim'), ':ClaudeCode')
 
+report(vim.g.molten_image_provider == 'none' or pcall(require, 'image'), '노트북 그래프 표시: ' .. tostring(vim.g.molten_image_provider))
 io.write('\n' .. table.concat(results, '\n') .. '\n')
 vim.cmd 'qa!'
 EOF
