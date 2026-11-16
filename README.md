@@ -1,7 +1,7 @@
 # nvim-config
 
 [kickstart.nvim](https://github.com/nvim-lua/kickstart.nvim) 기반 개인 Neovim 설정.
-C++ / Java / Python / Rust 개발과 코테, Jupyter 노트북(.ipynb), 오른쪽 분할창의 Claude Code 채팅을 지원한다.
+C++ / Java / Python / Rust 개발과 코테, Jupyter 노트북(.ipynb), Markdown 렌더링, 오른쪽 분할창의 Claude Code 채팅을 지원한다.
 
 ## 설치
 
@@ -45,6 +45,7 @@ macOS에서는 Homebrew와 Xcode Command Line Tools(`xcode-select --install`)가
 | `lua/custom/plugins/java.lua` | nvim-jdtls, Java 디버깅 / JUnit 테스트 |
 | `lua/custom/plugins/python.lua` | pyright + ruff, 저장 시 포맷, debugpy / pytest |
 | `lua/custom/plugins/jupyter.lua` | .ipynb 편집(jupytext.nvim) + 셀 실행(molten.nvim) |
+| `lua/custom/plugins/markdown.lua` | .md 파일을 nvim 안에서 렌더링 (render-markdown.nvim) |
 | `lua/custom/plugins/claudecode.lua` | Claude Code 오른쪽 분할창 (claudecode.nvim) |
 | `lua/custom/plugins/dap.lua` | 디버거 공통 (nvim-dap, C++/Rust codelldb) |
 | `after/ftplugin/rust.lua` | Rust 단축키 (F4 실행, F9 디버그, `<leader>r` 테스트/cargo) |
@@ -97,6 +98,7 @@ F4 / F9는 현재 파일 위치를 보고 무엇을 실행할지 정한다.
 | `<leader>jo` | Java import 정리 |
 | `<leader>jv` `<leader>jc` `<leader>jm` | Java 변수 / 상수 / 메서드 추출 |
 | `<leader>pt` / `<leader>pT` | Python 테스트 디버그: 메서드 / 클래스 |
+| `<leader>tm` | (Markdown) 렌더링 켜기 / 끄기 |
 | `<leader>ni` | 노트북 커널 시작 |
 | `<leader>nc` / `<leader>nn` | 현재 셀 실행 / 실행 후 다음 셀로 |
 | `<leader>na` | 모든 셀 실행 |

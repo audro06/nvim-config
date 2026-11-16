@@ -23,7 +23,7 @@ LOCAL_OPT="$HOME/.local/opt"
 # Mason으로 설치할 도구 (언어 서버 / 디버거 / 포매터)
 MASON_PACKAGES="clangd codelldb lua-language-server stylua jdtls java-debug-adapter java-test pyright ruff debugpy rust-analyzer"
 # treesitter 파서 (init.lua 기본 목록 + C++/Java/Python)
-TS_PARSERS="'bash','c','cpp','diff','html','java','lua','luadoc','markdown','markdown_inline','python','query','rust','toml','vim','vimdoc'"
+TS_PARSERS="'bash','c','cpp','diff','html','java','lua','luadoc','markdown','markdown_inline','python','query','rust','toml','vim','vimdoc','yaml'"
 
 SKIP_SYSTEM=0
 for arg in "$@"; do
