@@ -1,7 +1,7 @@
 # nvim-config
 
 [kickstart.nvim](https://github.com/nvim-lua/kickstart.nvim) 기반 개인 Neovim 설정.
-C++ / Java / Python 개발과 코테, Jupyter 노트북(.ipynb), 오른쪽 분할창의 Claude Code 채팅을 지원한다.
+C++ / Java / Python / Rust 개발과 코테, Jupyter 노트북(.ipynb), 오른쪽 분할창의 Claude Code 채팅을 지원한다.
 
 ## 설치
 
@@ -21,11 +21,12 @@ bash /tmp/nvim-config/scripts/bootstrap.sh
 | tree-sitter CLI | v0.26.7 → `~/.local/bin` |
 | Java | SDKMAN, Temurin 26 (기본), Maven, Gradle |
 | Python | uv |
+| Rust | rustup (stable) + rust-src, clippy, rustfmt |
 | Claude Code | 네이티브 설치 → `~/.local/bin/claude` |
 | 이 설정 | `~/.config/nvim`에 clone (기존 설정은 `nvim.backup-<날짜>`로 백업) |
 | 플러그인 | `lazy-lock.json`에 고정된 버전으로 설치 |
 | Jupyter | molten용 Python venv (`~/.local/share/nvim/jupyter-venv`), jupytext CLI |
-| treesitter 파서, Mason 도구 | jdtls, pyright, ruff, debugpy, clangd, codelldb 등 |
+| treesitter 파서, Mason 도구 | jdtls, pyright, ruff, debugpy, clangd, rust-analyzer, codelldb 등 |
 
 설치 후:
 
@@ -45,8 +46,10 @@ macOS에서는 Homebrew와 Xcode Command Line Tools(`xcode-select --install`)가
 | `lua/custom/plugins/python.lua` | pyright + ruff, 저장 시 포맷, debugpy / pytest |
 | `lua/custom/plugins/jupyter.lua` | .ipynb 편집(jupytext.nvim) + 셀 실행(molten.nvim) |
 | `lua/custom/plugins/claudecode.lua` | Claude Code 오른쪽 분할창 (claudecode.nvim) |
-| `lua/custom/plugins/dap.lua` | 디버거 공통 (nvim-dap, C++ codelldb) |
-| `lua/custom/plugins/competitest.lua` | 코테 테스트케이스 실행 (C++ / Java / Python) |
+| `lua/custom/plugins/dap.lua` | 디버거 공통 (nvim-dap, C++/Rust codelldb) |
+| `after/ftplugin/rust.lua` | Rust 단축키 (F4 실행, F9 디버그, `<leader>r` 테스트/cargo) |
+| `lua/custom/rust.lua` | Rust 실행 대상 판별, 디버그 빌드 |
+| `lua/custom/plugins/competitest.lua` | 코테 테스트케이스 실행 (C++ / Java / Python / Rust) |
 | `lua/custom/plugins/harpoon.lua` | 파일 빠른 이동 |
 | `lua/custom/mason.lua` | 언어별 파일에서 Mason 도구를 설치하는 헬퍼 |
 | `scripts/bootstrap.sh` | 새 컴퓨터 설치 스크립트 |
@@ -56,6 +59,21 @@ Java는 SDKMAN에 설치된 JDK를 모두 jdtls 런타임으로 등록하고, `s
 Maven / Gradle 프로젝트는 `pom.xml` / `build.gradle`에 지정한 버전으로 컴파일한다.
 
 Python은 프로젝트 루트의 `.venv`(uv로 만든 것 포함)를 자동으로 인식한다.
+
+### Rust
+
+rust-analyzer(Mason)가 저장할 때마다 clippy로 검사하고 rustfmt로 포맷한다.
+F4 / F9는 현재 파일 위치를 보고 무엇을 실행할지 정한다.
+
+| 현재 파일 | F4 (실행) | F9 (디버그) |
+|---|---|---|
+| `Cargo.toml` 없는 단일 파일 (코테) | `rustc --edition 2021 -O` 후 실행 | `-g`로 컴파일 후 디버그 |
+| `examples/foo.rs` | `cargo run --example foo` | 그 example 디버그 |
+| `src/main.rs`, `src/bin/foo.rs` | `cargo run` / `cargo run --bin foo` | 그 바이너리 디버그 |
+| `tests/foo.rs` | `cargo test --test foo` | 그 테스트 바이너리 디버그 |
+| 그 밖의 `src/` 파일 (main 없음) | 이 파일의 테스트만: `cargo test -- <모듈 경로>` | 이 파일의 테스트 디버그 |
+
+표준 라이브러리 자동완성이 안 되면 `rustup component add rust-src`.
 
 ### Jupyter 노트북
 
@@ -87,10 +105,13 @@ Python은 프로젝트 루트의 `.venv`(uv로 만든 것 포함)를 자동으�
 | `<leader>np` | 그래프 다시 열기 |
 | `<leader>nx` / `<leader>nR` | 실행 중단 / 커널 재시작 |
 | `]]` / `[[` | (노트북) 다음 / 이전 셀 |
-| `F4` | 현재 파일 컴파일 + 실행 (C++ / Java / Python) |
+| `F4` | 현재 파일 컴파일 + 실행 (C++ / Java / Python / Rust) |
 | `F5`–`F8` | competitest: 실행 / 테스트케이스 추가 / 수정 / 받기 |
-| `F9` `F10` `F11` | 디버그: 시작·계속 / step over / step into |
+| `F9` `F10` `F11` | 디버그: 시작·계속 / step over / step into (Rust는 F9가 빌드까지) |
 | `<leader>b` | 브레이크포인트 |
+| `<leader>rt` / `<leader>rd` | Rust: 커서가 있는 테스트 실행 / 디버그 |
+| `<leader>rf` / `<leader>ra` | Rust: 이 파일의 테스트 / 전체 `cargo test` |
+| `<leader>rr` `<leader>rb` `<leader>rc` | Rust: `cargo run` / `build` / `clippy` |
 | `<leader>a`, `<C-e>`, `<leader>1`–`4` | harpoon |
 
 ## kickstart 업데이트 받기

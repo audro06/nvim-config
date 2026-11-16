@@ -7,12 +7,14 @@ return {
       compile_command = {
         cpp = { exec = require('custom.cxx').compiler(), args = { '-std=c++23', '-Wall', '-O2', '$(FNAME)', '-o', '$(FNOEXT)' } },
         java = { exec = 'javac', args = { '$(FNAME)' } },
+        rust = { exec = 'rustc', args = { '--edition', '2021', '-O', '$(FNAME)', '-o', '$(FNOEXT)' } },
       },
       -- 실행 명령어
       run_command = {
         cpp = { exec = './$(FNOEXT)' },
         java = { exec = 'java', args = { '$(FNOEXT)' } },
         python = { exec = 'python3', args = { '$(FNAME)' } },
+        rust = { exec = './$(FNOEXT)' },
       },
       -- 테스트케이스 파일을 한 폴더에 모아 저장
       testcases_directory = 'testcases',
