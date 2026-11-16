@@ -6,7 +6,7 @@ return {
     'nvim-neotest/nvim-nio',
 
     -- Mason과 연동하여 디버거(codelldb) 자동 설치
-    'williamboman/mason.nvim',
+    'mason-org/mason.nvim',
     'jay-babu/mason-nvim-dap.nvim',
   },
   config = function()

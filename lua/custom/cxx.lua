@@ -28,11 +28,12 @@ end
 --   기본 clangd는 Apple libc++ 헤더를 써서 bits/stdc++.h를 못 찾음
 --   - compile_commands.json이 g++-NN을 쓰는 프로젝트: --query-driver로 gcc에 헤더 경로를 물어봄
 --   - 단일 파일(코테): fallbackFlags에 gcc의 C++ 헤더 경로를 넣음 (F4와 같은 -std=c++23)
+--   --log=error: clangd는 일반 로그도 stderr로 내보내서 Neovim의 lsp.log가 수백 MB까지 커짐
 ---@return vim.lsp.Config
 function M.clangd_config()
-  if vim.fn.has 'mac' == 0 then return {} end
+  if vim.fn.has 'mac' == 0 then return { cmd = { 'clangd', '--log=error' } } end
   return {
-    cmd = { 'clangd', '--query-driver=/opt/homebrew/bin/g++-*,/usr/local/bin/g++-*' },
+    cmd = { 'clangd', '--log=error', '--query-driver=/opt/homebrew/bin/g++-*,/usr/local/bin/g++-*' },
     before_init = function(params)
       local cxx = M.compiler()
       if cxx == 'g++' then return end
