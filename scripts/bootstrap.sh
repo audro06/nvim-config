@@ -2,7 +2,7 @@
 # nvim-config 설치 스크립트 (Ubuntu/WSL, macOS)
 #
 #   Neovim, Java(SDKMAN), Maven, Gradle, uv, Rust(rustup), Claude Code, tree-sitter CLI를 설치하고
-#   이 저장소를 ~/.config/nvim 에 받은 뒤 플러그인 / treesitter 파서 / Mason 도구까지 설치한다.
+#   이 저장소를 ~/.config/nvim 에 받은 뒤 플러그인 / treesitter 파서 / Mason 도구 / JUnit 실행용 jar까지 설치한다.
 #   이미 설치된 항목은 건너뛰므로 여러 번 실행해도 안전하다.
 #
 #   사용법:  bash bootstrap.sh [--skip-system]
@@ -23,7 +23,7 @@ LOCAL_BIN="$HOME/.local/bin"
 LOCAL_OPT="$HOME/.local/opt"
 
 # Mason으로 설치할 도구 (언어 서버 / 디버거 / 포매터)
-MASON_PACKAGES="clangd codelldb lua-language-server stylua jdtls java-debug-adapter java-test pyright ruff debugpy rust-analyzer"
+MASON_PACKAGES="clangd codelldb lua-language-server stylua jdtls java-debug-adapter pyright ruff debugpy rust-analyzer"
 # treesitter 파서 (init.lua 기본 목록 + C++/Java/Python)
 TS_PARSERS="'bash','c','cpp','diff','html','java','lua','luadoc','markdown','markdown_inline','python','query','rust','toml','vim','vimdoc','yaml'"
 
@@ -301,6 +301,16 @@ sync_nvim() {
     nvim --headless "+Lazy! build molten-nvim" +qa
     [ -x "$jupyter_venv/bin/python" ] || die "molten용 Python venv 생성 실패"
     grep -q molten "$rplugin_manifest" || die "molten 등록(UpdateRemotePlugins) 실패"
+  fi
+
+  # 테스트(neotest-java): JUnit 실행용 jar. 플러그인의 `:NeotestJava setup`을 확인 질문 없이 실행 (버전·체크섬은 플러그인이 관리)
+  local junit_dir="${XDG_DATA_HOME:-$HOME/.local/share}/nvim/neotest-java"
+  if ls "$junit_dir"/junit-platform-console-standalone-*.jar >/dev/null 2>&1; then
+    skip "JUnit 실행용 jar (neotest-java)"
+  else
+    info "JUnit 실행용 jar 설치 (neotest-java)"
+    nvim --headless -c "lua vim.ui.select = function(items, _, on_choice) on_choice(items[1]) end" -c "NeotestJava setup" +qa
+    ls "$junit_dir"/junit-platform-console-standalone-*.jar >/dev/null 2>&1 || die "JUnit jar 설치 실패. nvim에서 :NeotestJava setup 으로 다시 시도하세요."
   fi
 
   info "treesitter 파서 설치"

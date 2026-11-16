@@ -1,4 +1,5 @@
--- Java 개발 환경 (jdtls + 디버거 + JUnit 테스트)
+-- Java 개발 환경 (jdtls + 디버거)
+--  - 테스트: 공통 단축키 <leader>x (lua/custom/plugins/neotest.lua의 neotest-java)
 --  - LSP: nvim-jdtls가 Mason의 jdtls를 프로젝트별 workspace로 실행
 --  - 디버깅: 기존 nvim-dap(dap.lua)의 F9/F10/F11, <leader>b 그대로 사용
 --  - JDK: SDKMAN 기본 버전(Java 26)으로 실행, 설치된 다른 JDK도 자동 등록
@@ -12,23 +13,16 @@ return {
   config = function()
     local mason = require 'custom.mason'
 
-    -- jdtls, 디버거, 테스트 러너를 Mason으로 자동 설치
-    mason.ensure_installed { 'jdtls', 'java-debug-adapter', 'java-test' }
+    -- jdtls, 디버거를 Mason으로 자동 설치 (테스트는 neotest-java가 JUnit을 직접 실행)
+    mason.ensure_installed { 'jdtls', 'java-debug-adapter' }
 
     -- Java 문법 강조 (treesitter)
     require('nvim-treesitter').install { 'java' }
 
-    -- 디버거/테스트 jar 목록 (nvim-jdtls README 기준)
+    -- 디버거 jar (nvim-jdtls README 기준)
     local function get_bundles()
-      local bundles = {}
       local debug_jar = vim.fn.glob(mason.package_path 'java-debug-adapter' .. '/extension/server/com.microsoft.java.debug.plugin-*.jar', true)
-      if debug_jar ~= '' then table.insert(bundles, debug_jar) end
-
-      local excluded = { 'com.microsoft.java.test.runner-jar-with-dependencies.jar', 'jacocoagent.jar' }
-      for _, jar in ipairs(vim.fn.glob(mason.package_path 'java-test' .. '/extension/server/*.jar', true, true)) do
-        if not vim.tbl_contains(excluded, vim.fn.fnamemodify(jar, ':t')) then table.insert(bundles, jar) end
-      end
-      return bundles
+      return debug_jar ~= '' and { debug_jar } or {}
     end
 
     -- SDKMAN에 설치된 JDK들을 jdtls 런타임으로 등록 (current = sdk default 버전이 기본)
@@ -62,8 +56,6 @@ return {
       map('<leader>jv', jdtls.extract_variable, 'Extract [V]ariable', { 'n', 'x' })
       map('<leader>jc', jdtls.extract_constant, 'Extract [C]onstant', { 'n', 'x' })
       map('<leader>jm', function() jdtls.extract_method(true) end, 'Extract [M]ethod', 'x')
-      map('<leader>jt', jdtls.test_nearest_method, '[T]est nearest method')
-      map('<leader>jT', jdtls.test_class, '[T]est class')
     end
 
     local function start_jdtls()

@@ -3,6 +3,7 @@
 --  - 포맷: 저장 시 ruff로 자동 포맷 + import 정리 (conform)
 --  - 가상환경: 프로젝트의 .venv (uv로 만든 것 포함)를 자동 인식
 --  - 디버깅: 기존 nvim-dap(dap.lua)의 F9/F10/F11, <leader>b 그대로 사용
+--  - 테스트: 공통 단축키 <leader>x (lua/custom/plugins/neotest.lua의 neotest-python)
 return {
   { -- 저장 시 포맷: init.lua의 conform 설정에 python만 추가 (opts는 lazy가 병합)
     --  ruff_fix는 안 쓰는 import를 저장할 때마다 지워버려서 제외 (필요하면 gra 코드 액션으로)
@@ -49,7 +50,6 @@ return {
       -- 디버거: Mason의 debugpy 사용 (실행 대상 인터프리터는 .venv / VIRTUAL_ENV 자동 인식)
       local dap_python = require 'dap-python'
       dap_python.setup(mason.package_path 'debugpy' .. '/venv/bin/python')
-      dap_python.test_runner = 'pytest'
 
       vim.api.nvim_create_autocmd('FileType', {
         group = vim.api.nvim_create_augroup('custom-python', { clear = true }),
@@ -57,8 +57,6 @@ return {
         callback = function(args)
           local map = function(keys, func, desc, mode) vim.keymap.set(mode or 'n', keys, func, { buffer = args.buf, desc = 'Python: ' .. desc }) end
 
-          map('<leader>pt', dap_python.test_method, '[T]est method (debug)')
-          map('<leader>pT', dap_python.test_class, '[T]est class (debug)')
           map('<leader>ps', dap_python.debug_selection, 'Debug [S]election', 'x')
 
           -- F4: 현재 파일 저장 후 바로 실행 (.venv가 있으면 그 Python, 없으면 python3)

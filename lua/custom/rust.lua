@@ -1,4 +1,4 @@
--- Rust 실행 / 테스트 / 디버그 공용 헬퍼 (after/ftplugin/rust.lua, dap.lua에서 사용)
+-- Rust 실행 / 테스트 / 디버그 공용 헬퍼 (after/ftplugin/rust.lua, lua/custom/neotest_rust.lua에서 사용)
 --
 -- 현재 파일이 어떤 "실행 대상"인지 판별해서 알맞은 명령을 만든다.
 --   Cargo.toml 없음            → 단일 파일: rustc로 컴파일 후 실행 (코테용, C++ F4와 같은 방식)
@@ -77,41 +77,12 @@ function M.run_cmd(t)
   return vim.list_extend({ 'cargo', 'run' }, target_args(t)), t.root
 end
 
--- 커서가 있는 테스트 함수의 경로 (모듈 경로 :: 인라인 mod :: 함수 이름)
--- 커서가 함수 밖이면 이 파일의 모듈 경로만 돌려줌
----@param t RustTarget
----@return string filter, boolean is_fn 함수 하나를 가리키는지
-function M.test_filter_at_cursor(t)
-  local parts = {}
-  local fn_name
-  -- 파싱이 아직 안 된 버퍼면 get_node가 nil을 주므로 먼저 파싱 (rust 파서가 없으면 그냥 넘어감)
-  pcall(function() vim.treesitter.get_parser(0, 'rust'):parse() end)
-  local ok, node = pcall(vim.treesitter.get_node)
-  while ok and node do
-    local ty = node:type()
-    if ty == 'function_item' or ty == 'mod_item' then
-      local name_node = node:field('name')[1]
-      if name_node then
-        local name = vim.treesitter.get_node_text(name_node, 0)
-        if ty == 'function_item' then
-          fn_name = fn_name or name
-        else
-          table.insert(parts, 1, name)
-        end
-      end
-    end
-    node = node:parent()
-  end
-  if t.modpath ~= '' then table.insert(parts, 1, t.modpath) end
-  if fn_name then table.insert(parts, fn_name) end
-  return table.concat(parts, '::'), fn_name ~= nil
-end
-
 -- cargo test 명령 (filter가 nil이면 이 파일 전체 테스트)
 ---@param t RustTarget
----@param filter? string
+---@param filter? string 테스트 이름 필터 (모듈 경로::함수 이름)
+---@param exact? boolean filter와 이름이 정확히 같은 테스트만 (기본: 이름에 filter가 들어간 테스트 전부)
 ---@return string[]
-function M.test_cmd(t, filter)
+function M.test_cmd(t, filter, exact)
   if t.kind == 'single' then
     -- 단일 파일: rustc --test로 테스트 바이너리를 만들어 실행
     local out = vim.fn.fnamemodify(t.file, ':r') .. '_test'
@@ -122,13 +93,13 @@ function M.test_cmd(t, filter)
       vim.fn.shellescape(out),
       vim.fn.shellescape(out)
     )
-    if filter and filter ~= '' then cmd = cmd .. ' ' .. vim.fn.shellescape(filter) end
+    if filter and filter ~= '' then cmd = cmd .. ' ' .. vim.fn.shellescape(filter) .. (exact and ' --exact' or '') end
     return { 'sh', '-c', cmd }
   end
   local cmd = vim.list_extend({ 'cargo', 'test' }, target_args(t))
   -- lib는 src/ 아래 모든 대상(lib, main)을 대상으로 → 별도 인자 없이 이름 필터만
   filter = filter or t.modpath
-  if filter ~= '' then vim.list_extend(cmd, { '--', filter }) end
+  if filter ~= '' then vim.list_extend(cmd, { '--', filter, exact and '--exact' or nil }) end
   return cmd
 end
 
@@ -214,15 +185,14 @@ function M.build_for_debug(t, test_filter, cb)
 end
 
 -- F9: 디버그 세션이 있으면 계속, 없으면 빌드 후 codelldb로 시작
---   test_filter를 주면 그 테스트만 디버그 (<leader>rd)
----@param test_filter? string
-function M.debug(test_filter)
+--   (테스트 하나만 디버그: <leader>xd → lua/custom/neotest_rust.lua)
+function M.debug()
   local dap = require 'dap'
   if dap.session() then return dap.continue() end
 
   local t = M.target()
   vim.notify('Rust: 디버그 빌드 중...', vim.log.levels.INFO)
-  M.build_for_debug(t, test_filter, function(target, err)
+  M.build_for_debug(t, nil, function(target, err)
     if not target then
       vim.notify('Rust 빌드 실패\n' .. (err or ''), vim.log.levels.ERROR)
       return

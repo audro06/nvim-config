@@ -7,7 +7,7 @@
 #   4. 점검 중에 lazy-lock.json이 바뀌지 않았는지 (플러그인 버전 고정 확인)
 #
 #   사용법:  bash scripts/check.sh
-#   화면 없는 nvim(--headless)으로 돌리므로 LSP 연결·디버깅·실제 화면 모양까지는 확인하지 않는다.
+#   화면 없는 nvim(--headless)으로 돌리므로 LSP 연결·디버깅·테스트 실행·실제 화면 모양까지는 확인하지 않는다.
 set -uo pipefail
 
 CONFIG_DIR="$(cd "$(dirname "$0")/.." && pwd)"
@@ -77,8 +77,8 @@ report(#e == 0, '시작', e[1])
 local cases = {
   { 'a.cpp', 'cpp', { '<F4>' } },
   { 'Main.java', 'java', { '<F4>' } },
-  { 'a.py', 'python', { '<F4>', '<leader>pt' } },
-  { 'a.rs', 'rust', { '<F4>', '<F9>', '<leader>rt' } },
+  { 'a.py', 'python', { '<F4>' } },
+  { 'a.rs', 'rust', { '<F4>', '<F9>', '<leader>rr' } },
   { 'a.md', 'markdown', {} },
   { 'a.ipynb', 'python', { ']]' } },
 }
@@ -105,13 +105,22 @@ report(ns ~= nil and #vim.api.nvim_buf_get_extmarks(0, ns, 0, -1, {}) > 0, 'Mark
 vim.cmd('edit ' .. dir .. '/a.lua')
 vim.wait(300)
 report(not has_map '<F4>', 'F4는 언어 버퍼 전용 (lua 파일에는 없어야 함)')
-for _, lhs in ipairs { '<leader>cc', '<leader>ni', '<leader>na', '<leader>a', '<leader>b', '<F9>', 'gl' } do
+for _, lhs in ipairs { '<leader>cc', '<leader>ni', '<leader>na', '<leader>a', '<leader>b', '<leader>xt', '<leader>xs', '<F9>', 'gl' } do
   report(has_map(lhs), lhs .. ' 단축키')
 end
 report(vim.fn.exists ':MoltenInit' == 2, ':MoltenInit (안 되면 :Lazy build molten-nvim)')
 report(vim.fn.exists ':ClaudeCode' == 2 or pcall(vim.cmd, 'Lazy load claudecode.nvim'), ':ClaudeCode')
 
+-- neotest: 로드되고 어댑터 3개(Python/Java/Rust)가 등록되는지
+local neotest_ok, neotest_err = pcall(function()
+  require('lazy').load { plugins = { 'neotest' } }
+  local names = vim.tbl_map(function(a) return a.name end, require('neotest.config').adapters)
+  assert(#names == 3, '어댑터: ' .. table.concat(names, ', '))
+end)
+e = errors()
+report(neotest_ok and #e == 0, 'neotest 어댑터 (Python/Java/Rust)', not neotest_ok and tostring(neotest_err) or e[1])
 report(vim.g.molten_image_provider == 'none' or pcall(require, 'image'), '노트북 그래프 표시: ' .. tostring(vim.g.molten_image_provider))
+
 io.write('\n' .. table.concat(results, '\n') .. '\n')
 vim.cmd 'qa!'
 EOF
