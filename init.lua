@@ -614,7 +614,15 @@ require('lazy').setup({
         clangd = require('custom.cxx').clangd_config(), -- macOS: brew gcc 헤더 사용 (Linux는 기본값)
         -- gopls = {},
         -- pyright = {},
-        -- rust_analyzer = {},
+        -- Rust: Mason의 rust-analyzer. 저장할 때 cargo check 대신 clippy로 검사 (더 많은 개선점 알려 줌)
+        --  실행/테스트/디버그 단축키는 after/ftplugin/rust.lua
+        rust_analyzer = {
+          settings = {
+            ['rust-analyzer'] = {
+              check = { command = 'clippy' },
+            },
+          },
+        },
         --
         -- Some languages (like typescript) have entire language plugins that can be useful:
         --    https://github.com/pmizio/typescript-tools.nvim
@@ -885,7 +893,7 @@ require('lazy').setup({
     branch = 'main',
     -- [[ Configure Treesitter ]] See `:help nvim-treesitter-intro`
     config = function()
-      local parsers = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc' }
+      local parsers = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'rust', 'toml', 'vim', 'vimdoc' }
       require('nvim-treesitter').install(parsers)
       vim.api.nvim_create_autocmd('FileType', {
         callback = function(args)

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # nvim-config 설치 스크립트 (Ubuntu/WSL, macOS)
 #
-#   Neovim, Java(SDKMAN), Maven, Gradle, uv, Claude Code, tree-sitter CLI를 설치하고
+#   Neovim, Java(SDKMAN), Maven, Gradle, uv, Rust(rustup), Claude Code, tree-sitter CLI를 설치하고
 #   이 저장소를 ~/.config/nvim 에 받은 뒤 플러그인 / treesitter 파서 / Mason 도구까지 설치한다.
 #   이미 설치된 항목은 건너뛰므로 여러 번 실행해도 안전하다.
 #
@@ -21,9 +21,9 @@ LOCAL_BIN="$HOME/.local/bin"
 LOCAL_OPT="$HOME/.local/opt"
 
 # Mason으로 설치할 도구 (언어 서버 / 디버거 / 포매터)
-MASON_PACKAGES="clangd codelldb lua-language-server stylua jdtls java-debug-adapter java-test pyright ruff debugpy"
+MASON_PACKAGES="clangd codelldb lua-language-server stylua jdtls java-debug-adapter java-test pyright ruff debugpy rust-analyzer"
 # treesitter 파서 (init.lua 기본 목록 + C++/Java/Python)
-TS_PARSERS="'bash','c','cpp','diff','html','java','lua','luadoc','markdown','markdown_inline','python','query','vim','vimdoc'"
+TS_PARSERS="'bash','c','cpp','diff','html','java','lua','luadoc','markdown','markdown_inline','python','query','rust','toml','vim','vimdoc'"
 
 SKIP_SYSTEM=0
 for arg in "$@"; do
@@ -197,6 +197,19 @@ install_uv() {
   fi
 }
 
+# ---------------------------------------------------------------- Rust (rustup)
+install_rust() {
+  if [ -x "$HOME/.cargo/bin/rustup" ]; then skip "Rust (rustup)"; else
+    info "Rust 설치 (rustup, stable)"
+    download "https://sh.rustup.rs" "$TMP_DIR/rustup.sh"
+    # ~/.bashrc 등에 ~/.cargo/env를 불러오는 줄을 rustup이 직접 추가함
+    sh "$TMP_DIR/rustup.sh" -y --profile minimal
+  fi
+  export PATH="$HOME/.cargo/bin:$PATH"
+  # rust-src: rust-analyzer가 표준 라이브러리 자동완성에 사용 / clippy, rustfmt: 저장 시 검사·포맷
+  rustup component add rust-src clippy rustfmt >/dev/null
+}
+
 install_claude() {
   if [ -x "$LOCAL_BIN/claude" ]; then skip "Claude Code"; else
     info "Claude Code 설치"
@@ -324,6 +337,7 @@ install_neovim
 install_tree_sitter
 install_java
 install_uv
+install_rust
 install_claude
 ensure_path
 setup_config
