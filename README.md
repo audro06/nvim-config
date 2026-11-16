@@ -41,7 +41,10 @@ macOS에서는 Homebrew와 Xcode Command Line Tools(`xcode-select --install`)가
 
 | 파일 | 내용 |
 |---|---|
-| `init.lua` | kickstart 기본 설정 + 개인 설정 (C++ F4 실행, 스니펫, Copilot) |
+| `init.lua` | kickstart 기본 설정 (LSP, 자동완성, treesitter 등) |
+| `lua/custom/settings.lua` | 개인 옵션, 진단 표시, Copilot 설정 |
+| `lua/custom/snippets.lua` | C++ 스니펫 (`cp`, `hw`, `fori`) |
+| `after/ftplugin/cpp.lua` | C++ F4 (컴파일 + 실행) |
 | `lua/custom/plugins/java.lua` | nvim-jdtls, Java 디버깅 / JUnit 테스트 |
 | `lua/custom/plugins/python.lua` | pyright + ruff, 저장 시 포맷, debugpy / pytest |
 | `lua/custom/plugins/jupyter.lua` | .ipynb 편집(jupytext.nvim) + 셀 실행(molten.nvim) |
@@ -54,6 +57,8 @@ macOS에서는 Homebrew와 Xcode Command Line Tools(`xcode-select --install`)가
 | `lua/custom/plugins/harpoon.lua` | 파일 빠른 이동 |
 | `lua/custom/mason.lua` | 언어별 파일에서 Mason 도구를 설치하는 헬퍼 |
 | `scripts/bootstrap.sh` | 새 컴퓨터 설치 스크립트 |
+| `scripts/check.sh` | 설정 점검 (포맷, 시작 오류, 언어별 파일 열기, 단축키) |
+| `CLAUDE.md` | 설정을 고칠 때 읽는 문서 (구조, 규칙, 검증 방법, 함정, 다음에 할 일) |
 | `scripts/jupyter_wsl_viewer.py` | WSL에서 노트북 그래프를 Windows 이미지 뷰어로 여는 훅 |
 
 Java는 SDKMAN에 설치된 JDK를 모두 jdtls 런타임으로 등록하고, `sdk default`로 지정한 버전을 기본으로 쓴다.
@@ -115,6 +120,16 @@ F4 / F9는 현재 파일 위치를 보고 무엇을 실행할지 정한다.
 | `<leader>rf` / `<leader>ra` | Rust: 이 파일의 테스트 / 전체 `cargo test` |
 | `<leader>rr` `<leader>rb` `<leader>rc` | Rust: `cargo run` / `build` / `clippy` |
 | `<leader>a`, `<C-e>`, `<leader>1`–`4` | harpoon |
+
+## 설정을 고칠 때
+
+구조와 규칙, 겪었던 함정은 [CLAUDE.md](CLAUDE.md)에 정리되어 있다. 고친 뒤에는 커밋하기 전에 점검 스크립트를 돌린다.
+
+```bash
+bash scripts/check.sh
+```
+
+플러그인 버전은 `lazy-lock.json`에 고정되어 있다. `:Lazy sync`나 `:Lazy update`는 모든 플러그인을 최신으로 올리므로, 새 플러그인만 설치할 때는 `:Lazy install`을 쓴다.
 
 ## kickstart 업데이트 받기
 

@@ -1,0 +1,28 @@
+# 정적 검사: Lua 포맷, 셸 스크립트, Python 문법
+#  (nvim을 실제로 띄우는 점검은 로컬에서 scripts/check.sh로 한다)
+name: Check
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  static:
+    name: Static checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+      - name: Stylua Check
+        uses: JohnnyMorganz/stylua-action@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          version: latest
+          args: --check .
+      - name: Shell scripts
+        run: |
+          bash -n scripts/bootstrap.sh
+          bash -n scripts/check.sh
+          shellcheck --severity=warning scripts/bootstrap.sh scripts/check.sh
+      - name: Python syntax
+        run: python3 -m py_compile scripts/jupyter_wsl_viewer.py
