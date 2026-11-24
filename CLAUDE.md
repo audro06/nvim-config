@@ -105,6 +105,7 @@ bash scripts/check.sh
 17. **neotest-java는 빌드 파일이 없어도 `.git`만 있으면 그 폴더를 자기 프로젝트로 잡는다.** 그대로 두면 Rust/Python 프로젝트의 `<leader>xa`를 가로채서 오류가 난다. `neotest.lua`에서 `root`를 감싸 Maven/Gradle 프로젝트로 제한하고 있다. 플러그인을 올릴 때 여전히 필요한지 확인한다.
 18. **WSL에서는 터미널의 픽셀 크기를 알 수 없다** (`ioctl`이 0을 돌려줌). image.nvim은 글자 한 칸을 8x16으로 가정하는데 Windows Terminal의 Sixel은 한 칸을 10x20으로 취급하므로 `jupyter.lua`에서 보정한다. image.nvim은 `image/utils/term`, molten은 `image.utils.term`으로 같은 파일을 따로 불러서 둘 다 고쳐야 한다.
 19. **Rust 테스트를 디버그(`<leader>xd`)로 실행하면 테스트 출력이 neotest로 넘어오지 않는다** (codelldb). 그래서 `neotest_rust.lua`는 출력이 비어 있으면 종료 코드로 성공/실패를 판정한다.
+20. **LuaSnip은 기본값으로 끝내지 않은 스니펫을 계속 살려 둔다.** blink `super-tab`의 Tab은 스니펫이 살아 있으면 들여쓰기 대신 그 위치로 점프하므로, 다른 줄에서 Tab을 누르면 커서가 예전 스니펫으로 날아간다. `snippets.lua`의 `region_check_events`로 막고 있다. 화면 없는 nvim에서 확인할 때는 `ls.lsp_expand` 뒤에 `nvim_feedkeys('', 'x', false)`로 쌓인 키를 처리해야 한다 (안 하면 `jump_active`가 켜진 채라 검사가 건너뛰어진다).
 
 ## 알려진 한계
 
